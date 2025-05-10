@@ -182,12 +182,13 @@ class CodeReviewPipe:
         # count tokens
         num_tokens = self.chat_gpt_client.num_tokens_from_messages(messages, self.model)
 
-        chat_gpt_token_limit = int(os.getenv('CHATGPT_PROMPT_MAX_TOKENS'))
+        chat_gpt_token_limit = int(os.getenv('CHATGPT_PROMPT_MAX_TOKENS', '0'))
+
         if chat_gpt_token_limit != 0 and num_tokens > chat_gpt_token_limit:
             logger.warning(
                 f"The number of tokens is ~{num_tokens} that more then allowed CHATGPT_PROMPT_MAX_TOKENS {chat_gpt_token_limit} tokens")
             logger.info('Pipe is stopped.')
-            return
+            return None
 
         logger.info(f"ChatGPT configuration: model: {self.model}")
 
@@ -293,6 +294,7 @@ class CodeReviewPipe:
 
         # chatGPT
         chatgpt_parameters = {
+            "base_url": self.base_url,
             "api_key": self.open_api_key,
             "organization": self.organization,
         }
