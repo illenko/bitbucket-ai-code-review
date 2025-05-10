@@ -16,7 +16,7 @@ from requests.auth import HTTPBasicAuth
 logger = logging.getLogger(__name__)
 
 DEFAULT_SYSTEM_PROMPT_FOR_CODE_REVIEW = '''
-"Review a file of source code, and the git diff of a set of changes made to that file on a Pull Request. Follow a software development principles: SOLID, DRY, KISS, YAGNI. Skip compliments."
+"Review a file of source code, and the git diff of a set of changes made to that file on a Pull Request. Follow a software development principles: SOLID, DRY, KISS, YAGNI. Skip compliments. Propose corrections."
 "You are a helpful assistant designed to output JSON."
 "The response must be a JSON object where the key for each piece of feedback is the filename and line number in the file where the feedback must be left, and the value is the feedback itself as a string. "
 "JSON must follow the next structure {“{filename:line-number}“: “{feedback relating to the referenced line in the file.}“}"
@@ -197,7 +197,6 @@ class CodeReviewPipe:
             'messages': messages,
         }
 
-        # get payload with params for completion
         if self.completion_parameters_payload_file:
             users_completion_params = self.load_yaml(self.completion_parameters_payload_file)
 
@@ -236,9 +235,6 @@ class CodeReviewPipe:
         return suggestions
 
     def add_comments(self, pull_request_id, data):
-        # add comment to PR
-        # "app/pipe/pipe.py:92: Review comments"
-        # "pipe/pipe.py:92-95: Review comments"
         pattern_filename_line = re.compile(r"(.+):(\d+)")
 
         added_suggestions_counter = 0
@@ -267,18 +263,9 @@ class CodeReviewPipe:
     def run(self):
         logger.info('Executing the pipe...')
 
-        # fetch the current triggered PR ID
-        # Only available on a pull request triggered build
-        # https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/
-        # https://support.atlassian.com/bitbucket-cloud/docs/pipeline-start-conditions/#Pull-Requests
         pull_request_id = os.getenv("BITBUCKET_PR_ID")
         if pull_request_id is None:
-            raise EnvironmentError(
-                'BITBUCKET_PR_ID variable is required! '
-                'Pullrequest ID variable is not detected in the environment. '
-                'Make sure the pipe is executed on a pull request triggered build: '
-                'https://support.atlassian.com/bitbucket-cloud/docs/pipeline-start-conditions/#Pull-Requests'
-            )
+            raise EnvironmentError('BITBUCKET_PR_ID variable is required!')
 
         diffs_to_review = self.get_diffs_to_review(pull_request_id)
 
@@ -292,13 +279,12 @@ class CodeReviewPipe:
 
         logger.info(f"Files with diffs count {len(files_with_diffs)}: {set(files_with_diffs)}")
 
-        # chatGPT
         chatgpt_parameters = {
             "base_url": self.base_url,
             "api_key": self.open_api_key,
             "organization": self.organization,
         }
-        # get payload with params for chatgpt client
+
         if self.chatgpt_parameters_payload_file:
             users_chatgpt_parameters = self.load_yaml(self.chatgpt_parameters_payload_file)
 
