@@ -67,3 +67,15 @@ Detailed logging is available for:
 - Token usage
 - Files reviewed
 - Number of suggestions
+
+## Create docker image:
+
+```shell
+docker build -t ai-code-reviewer .
+```
+
+## Run docker image:
+
+```shell
+docker run ai-code-reviewer
+```

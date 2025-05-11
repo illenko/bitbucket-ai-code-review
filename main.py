@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_SYSTEM_PROMPT_FOR_CODE_REVIEW = '''
 "Review a file of source code, and the git diff of a set of changes made to that file on a Pull Request. Follow a software development principles: SOLID, DRY, KISS, YAGNI. Skip compliments. Propose corrections."
 "You are a helpful assistant designed to output JSON."
-"The response must be a JSON object where the key for each piece of feedback is the filename and line number in the file where the feedback must be left, and the value is the feedback itself as a string. "
-"JSON must follow the next structure {“{filename:line-number}“: “{feedback relating to the referenced line in the file.}“}"
+"The response must be a JSON object containing summarization and suggestions where the key for each piece of feedback is the filename and line number in the file where the feedback must be left, and the value is the feedback itself as a string. "
+"JSON must follow the next structure {"summary“: "{pull request detailed description}", "suggestions": { "{filename:line-number}“: “{feedback relating to the referenced line in the file.}“ } }"
 '''
 
 
@@ -162,7 +162,7 @@ class CodeReviewPipe:
         except yaml.YAMLError as error:
             raise yaml.YAMLError(f"File {filepath} couldn't be loaded. Error: {error}")
 
-    def get_suggestions(self, diffs_to_review):
+    def get_code_review(self, diffs_to_review):
         messages = []
         default_messages_system = {
             "role": "system",
@@ -260,6 +260,14 @@ class CodeReviewPipe:
 
         return set(files_with_comments), added_suggestions_counter
 
+    def add_summary(self, pull_request_id, summary):
+        payload = {
+            'content': {
+                'raw': summary
+            }
+        }
+        self.bitbucket_client.add_comment(pull_request_id, payload)
+
     def run(self):
         logger.info('Executing the pipe...')
 
@@ -294,7 +302,11 @@ class CodeReviewPipe:
 
         self.chat_gpt_client = AiService(**chatgpt_parameters)
 
-        suggestions = self.get_suggestions(diffs_to_review)
+        code_review = self.get_code_review(diffs_to_review)
+        summary = code_review.get('summary')
+        suggestions = code_review.get('suggestions')
+        if summary:
+            self.add_summary(pull_request_id, summary)
         files_with_comments, added_suggestions_counter = self.add_comments(pull_request_id, suggestions)
 
         logger.info(f"ChatGPT suggestions count: {added_suggestions_counter}")

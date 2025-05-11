@@ -1,0 +1,6 @@
+pyyaml
+requests
+json-repair
+tiktoken
+bitbucket-pipes-toolkit
+openai>=1.0.0
