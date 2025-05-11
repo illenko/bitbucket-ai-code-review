@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_SYSTEM_PROMPT_FOR_CODE_REVIEW = '''
 "Review a file of source code, and the git diff of a set of changes made to that file on a Pull Request. Follow a software development principles: SOLID, DRY, KISS, YAGNI. Skip compliments. Propose corrections."
 "You are a helpful assistant designed to output JSON."
-"The response must be a JSON object containing summarization and suggestions where the key for each piece of feedback is the filename and line number in the file where the feedback must be left, and the value is the feedback itself as a string. "
-"JSON must follow the next structure {"summary“: "{pull request detailed description}", "suggestions": { "{filename:line-number}“: “{feedback relating to the referenced line in the file.}“ } }"
+"The response must be a JSON object containing summarization, possible qa test cases and suggestions where the key for each piece of feedback is the filename and line number in the file where the feedback must be left, and the value is the feedback itself as a string. "
+"JSON must follow the next structure {"summary“: "{pull request detailed description}", "qa_details": "{possible qa test cases}", "suggestions": { "{filename:line-number}“: “{feedback relating to the referenced line in the file.}“ } }"
 '''
 
 
@@ -304,9 +304,14 @@ class CodeReviewPipe:
 
         code_review = self.get_code_review(diffs_to_review)
         summary = code_review.get('summary')
+        qa_details = code_review.get('qa_details')
         suggestions = code_review.get('suggestions')
         if summary:
             self.add_summary(pull_request_id, summary)
+
+        if qa_details:
+            self.add_summary(pull_request_id, qa_details)
+
         files_with_comments, added_suggestions_counter = self.add_comments(pull_request_id, suggestions)
 
         logger.info(f"ChatGPT suggestions count: {added_suggestions_counter}")
